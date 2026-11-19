@@ -75,7 +75,7 @@ public class MainActivity extends Activity {
     root.addView(nav);
   }
   void feed(){
-    LinearLayout bar=horizontal();pad(bar,20,12,20,8);TextView logo=text("♡",34,accent,true);bar.addView(logo,new LinearLayout.LayoutParams(0,dp(46),1));TextView bell=button("♧",()->dialog("Уведомления","Новых уведомлений нет"));bar.addView(bell);content.addView(bar);
+    LinearLayout bar=horizontal();pad(bar,20,12,20,8);TextView logo=text("♡",34,accent,true);bar.addView(logo,new LinearLayout.LayoutParams(0,dp(46),1));TextView bell=button("♧",()->notifications());bar.addView(bell);content.addView(bar);
     tabs(new String[]{"Для тебя","Подписки"},0,i->{if(i==1)dialog("Подписки","Публикации подписок появятся после подключения аккаунтов");});
     for(int i=0;i<posts.size();i++)postCard(i);
   }
@@ -130,9 +130,22 @@ public class MainActivity extends Activity {
   void profile(){View cover=new View(this);cover.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{Color.rgb(74,29,53),BG}));content.addView(cover,lp(-1,125));TextView avatar=text("♙",38,WHITE,false);avatar.setGravity(Gravity.CENTER);avatar.setBackground(shape(accent,55));LinearLayout.LayoutParams a=lp(80,80);a.setMargins(dp(18),dp(-25),0,0);content.addView(avatar,a);
     TextView name=text("aidar.kg",23,WHITE,true);pad(name,18,10,18,2);content.addView(name);TextView handle=text("Он/его · Бишкек 🇰🇬",13,MUTED,false);pad(handle,18,0,18,15);content.addView(handle);
     TextView bio=text("Знакомства · Общение · Новые люди 💜\nСпорт · Путешествия · Кино",14,WHITE,false);pad(bio,18,0,18,17);content.addView(bio);
-    LinearLayout buttons=horizontal();pad(buttons,18,0,18,18);buttons.addView(button("Редактировать",()->dialog("Профиль","Редактирование аккаунта добавим после Firebase")));TextView settings=button("⚙ Настройки",()->settings());LinearLayout.LayoutParams sp=lp(-2,-2);sp.setMargins(dp(9),0,0,0);buttons.addView(settings,sp);content.addView(buttons);TextView stats=text("248 Подписки        1 392 Подписчика        312 Подписки",13,WHITE,true);pad(stats,18,12,18,15);content.addView(stats);tabs(new String[]{"▦","▤","♧"},0,i->{});TextView empty=text("Публикаций пока нет",14,MUTED,false);empty.setGravity(Gravity.CENTER);pad(empty,0,45,0,0);content.addView(empty);
+    LinearLayout buttons=horizontal();pad(buttons,18,0,18,18);buttons.addView(button("Редактировать",()->editProfile()));TextView settings=button("⚙ Настройки",()->settings());LinearLayout.LayoutParams sp=lp(-2,-2);sp.setMargins(dp(9),0,0,0);buttons.addView(settings,sp);content.addView(buttons);TextView stats=text("248 Подписки        1 392 Подписчика        312 Подписки",13,WHITE,true);pad(stats,18,12,18,15);content.addView(stats);tabs(new String[]{"▦","▤","♧"},0,i->{});TextView empty=text("Публикаций пока нет",14,MUTED,false);empty.setGravity(Gravity.CENTER);pad(empty,0,45,0,0);content.addView(empty);
   }
-  void settings(){options("Настройки",new String[]{"Конфиденциальность","Оформление","Уведомления","О Menly"},i->{if(i==0)privacy();if(i==1)themes();if(i==2)dialog("Уведомления","Настройки уведомлений будут доступны позднее");if(i==3)dialog("Menly","Нативный Android-прототип на Java. Без веб-интерфейса и Firebase.");});}
+  void settings(){options("Настройки",new String[]{"Конфиденциальность","Оформление","Уведомления","Сохранённое","О Menly"},i->{if(i==0)privacy();if(i==1)themes();if(i==2)notifications();if(i==3)saved();if(i==4)dialog("Menly","Нативное Android-приложение на Java. Firebase ещё не подключён.");});}
+  void notifications(){new AlertDialog.Builder(this).setTitle("Уведомления").setItems(new String[]{"Все","Упоминания","Подписки","Сообщения"},(d,i)->dialog("Уведомления","События будут появляться здесь после подключения Firebase")).setPositiveButton("Готово",null).show();}
+  void saved(){dialog("Сохранённые публикации","Сохранённые публикации будут отображаться здесь после подключения аккаунтов.");}
+  void editProfile(){
+    LinearLayout form=vertical();pad(form,20,5,20,5);
+    EditText name=new EditText(this),handle=new EditText(this),city=new EditText(this),bio=new EditText(this);
+    name.setSingleLine();handle.setSingleLine();city.setSingleLine();
+    name.setHint("Имя");name.setText(prefs.getString("display_name","Мой профиль"));
+    handle.setHint("Никнейм");handle.setText(prefs.getString("handle","menly_user"));
+    city.setHint("Город");city.setText(prefs.getString("city","Бишкек"));
+    bio.setHint("О себе");bio.setText(prefs.getString("bio",""));
+    for(EditText e:new EditText[]{name,handle,city,bio})form.addView(e,lp(-1,-2));
+    new AlertDialog.Builder(this).setTitle("Редактировать профиль").setView(form).setNegativeButton("Отмена",null).setPositiveButton("Сохранить",(d,w)->{prefs.edit().putString("display_name",name.getText().toString()).putString("handle",handle.getText().toString()).putString("city",city.getText().toString()).putString("bio",bio.getText().toString()).apply();show(4);}).show();
+  }
   void privacy(){
     String[] choices={"Все пользователи","Только подписчики","Никто"};
     int current=prefs.getInt("dm_privacy",0);
