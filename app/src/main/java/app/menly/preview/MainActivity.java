@@ -26,8 +26,8 @@ import android.graphics.drawable.GradientDrawable;
 import java.io.InputStream;
 
 public class MainActivity extends Activity {
-  final int BG=Color.rgb(9,9,13), CARD=Color.rgb(22,20,27), LINE=Color.rgb(43,39,47), WHITE=Color.WHITE, MUTED=Color.rgb(151,145,156);
-  int accent=Color.rgb(184,61,255), page=0; boolean anon=false; String selectedMedia=""; String audience="Вся Центральная Азия", chatMode="Личные";
+  final int BG=Color.rgb(8,8,11), CARD=Color.rgb(29,27,34), LINE=Color.rgb(43,39,49), WHITE=Color.WHITE, MUTED=Color.rgb(157,150,165);
+  int accent=Color.rgb(169,52,230), page=0, activityFilter=0, profileTab=0; boolean anon=false; int radiusKm=10; String draft=""; String selectedMedia=""; String audience="Вся Центральная Азия", chatMode="Личные";
   LinearLayout root,content,nav; ScrollView scroll;
   SharedPreferences prefs;
   ArrayList<Post> posts=new ArrayList<>();
@@ -180,11 +180,39 @@ public class MainActivity extends Activity {
     for(String m:history){TextView bubble=text(m,15,WHITE,false);pad(bubble,14,11,14,11);bubble.setBackground(shape(CARD,16));LinearLayout.LayoutParams b=lp(-2,-2);b.setMargins(0,0,0,dp(10));msgs.addView(bubble,b);}
     LinearLayout compose=horizontal();pad(compose,10,7,10,12);EditText entry=new EditText(this);entry.setSingleLine();entry.setTextColor(WHITE);entry.setHint("Сообщение");entry.setHintTextColor(MUTED);entry.setBackground(shape(CARD,22));pad(entry,13,9,13,9);compose.addView(entry,new LinearLayout.LayoutParams(0,dp(46),1));TextView send=button("➤",()->{String m=entry.getText().toString().trim();if(!m.isEmpty()){history.add(m);prefs.edit().putString("chat_"+name,new JSONArray(history).toString()).apply();conversation(name);}});compose.addView(send);root.addView(compose);
   }
-  void create(){heading("Новая публикация");EditText field=new EditText(this);field.setId(881);field.setTextColor(WHITE);field.setHintTextColor(MUTED);field.setHint("О чём думаешь?");field.setGravity(Gravity.TOP);field.setMinLines(7);field.setBackground(shape(CARD,15));pad(field,16,15,16,15);LinearLayout.LayoutParams f=lp(-1,-2);f.setMargins(dp(18),0,dp(18),dp(10));content.addView(field,f);
-    row("Анонимная публикация",anon?"Включено · исчезнет через 24 часа":"Выключено",()->{anon=!anon;String s=field.getText().toString();show(2);((EditText)findViewById(881)).setText(s);});
-    row("Кто увидит публикацию",audience,()->options("Аудитория",new String[]{"Вся Центральная Азия","Моя страна","1 км","5 км","10 км","25 км","50 км","100 км"},i->{audience=new String[]{"Вся Центральная Азия","Моя страна","1 км","5 км","10 км","25 км","50 км","100 км"}[i];String s=field.getText().toString();show(2);((EditText)findViewById(881)).setText(s);}));
+  void create(){heading("Новая публикация");EditText field=new EditText(this);field.setId(881);field.setText(draft);field.setTextColor(WHITE);field.setHintTextColor(MUTED);field.setHint("О чём думаешь?");field.setGravity(Gravity.TOP);field.setMinLines(7);field.setBackground(shape(CARD,15));pad(field,16,15,16,15);LinearLayout.LayoutParams f=lp(-1,-2);f.setMargins(dp(18),0,dp(18),dp(10));content.addView(field,f);
+    row("Анонимная публикация",anon?"Включено · исчезнет через 24 часа":"Выключено",()->{anon=!anon;draft=field.getText().toString();show(2);});
+    row("Кто увидит публикацию",audience,()->{draft=field.getText().toString();audienceScreen();});
     row("Добавить фото или видео",selectedMedia.isEmpty()?"Выбрать из галереи":"Фото выбрано ✓",()->chooseMedia());
-    TextView publish=button("Опубликовать",()->{String s=field.getText().toString().trim();if(s.isEmpty()){Toast.makeText(this,"Напиши текст",Toast.LENGTH_SHORT).show();return;}Post created=new Post(anon?"Анонимный пользователь":"menly_user","сейчас",s,0,0,0,anon,false);created.media=selectedMedia;posts.add(0,created);selectedMedia="";anon=false;persist();show(0);});publish.setBackground(shape(accent,14));LinearLayout.LayoutParams p=lp(-1,52);p.setMargins(dp(18),dp(20),dp(18),0);content.addView(publish,p);
+    TextView publish=button("Опубликовать",()->{String s=field.getText().toString().trim();if(s.isEmpty()){Toast.makeText(this,"Напиши текст",Toast.LENGTH_SHORT).show();return;}Post created=new Post(anon?"Анонимный пользователь":"menly_user","сейчас",s,0,0,0,anon,false);created.media=selectedMedia;posts.add(0,created);selectedMedia="";draft="";anon=false;persist();show(0);});publish.setBackground(shape(accent,14));LinearLayout.LayoutParams p=lp(-1,52);p.setMargins(dp(18),dp(20),dp(18),0);content.addView(publish,p);
+  }
+  void subScreen(String title){
+    root=vertical();root.setBackgroundColor(BG);setContentView(root);
+    LinearLayout head=horizontal();pad(head,12,9,15,9);
+    TextView back=button("×",()->show(2));head.addView(back,lp(45,43));
+    TextView h=text(title,17,WHITE,true);h.setGravity(Gravity.CENTER);head.addView(h,new LinearLayout.LayoutParams(0,dp(43),1));
+    head.addView(new View(this),lp(45,43));root.addView(head);line(root);
+    scroll=new ScrollView(this);content=vertical();scroll.addView(content);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+  }
+  void audienceScreen(){
+    subScreen("Аудитория публикации");
+    row("◎  Рядом со мной","Выбрать радиус (1–100 км)"+(audience.endsWith("км")?" · "+audience:""),()->radiusScreen());
+    row("🇰🇬  Вся моя страна","Кыргызстан",()->{audience="Моя страна";show(2);});
+    row("◉  Вся Центральная Азия","Кыргызстан, Казахстан, Узбекистан",()->{audience="Вся Центральная Азия";show(2);});
+    TextView tip=text("Выбранная аудитория: "+audience,13,accent,false);pad(tip,20,25,20,0);content.addView(tip);
+  }
+  void radiusScreen(){
+    subScreen("Радиус");
+    TextView heading=text("Радиус",20,WHITE,true);pad(heading,20,35,20,10);content.addView(heading);
+    TextView current=text(radiusKm+" км",22,WHITE,true);current.setGravity(Gravity.RIGHT);pad(current,20,0,25,15);content.addView(current);
+    SeekBar seek=new SeekBar(this);seek.setMax(100);seek.setProgress(radiusKm);seek.setProgressTintList(android.content.res.ColorStateList.valueOf(accent));seek.setThumbTintList(android.content.res.ColorStateList.valueOf(accent));pad(seek,20,12,20,12);content.addView(seek);seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+      public void onProgressChanged(SeekBar b,int p,boolean user){radiusKm=Math.max(1,p);current.setText(radiusKm+" км");}
+      public void onStartTrackingTouch(SeekBar b){}public void onStopTrackingTouch(SeekBar b){}
+    });
+    LinearLayout choices=horizontal();pad(choices,15,14,15,0);int[] values={1,5,10,25,50,100};
+    for(int value:values){TextView chip=button(value+" км",()->{radiusKm=value;audience=value+" км";show(2);});chip.setTextSize(11);LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,dp(38),1);cp.setMargins(dp(2),0,dp(2),0);choices.addView(chip,cp);}
+    content.addView(choices);
+    TextView confirm=button("Применить радиус",()->{audience=radiusKm+" км";show(2);});confirm.setBackground(shape(accent,13));LinearLayout.LayoutParams c=lp(-1,50);c.setMargins(dp(20),dp(30),dp(20),0);content.addView(confirm,c);
   }
   void chooseMedia(){android.content.Intent intent=new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);intent.addCategory(android.content.Intent.CATEGORY_OPENABLE);intent.setType("image/*");intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION|android.content.Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);startActivityForResult(intent,400);}
   @Override protected void onActivityResult(int requestCode,int resultCode,android.content.Intent data){super.onActivityResult(requestCode,resultCode,data);if(resultCode==RESULT_OK&&data!=null&&data.getData()!=null){
