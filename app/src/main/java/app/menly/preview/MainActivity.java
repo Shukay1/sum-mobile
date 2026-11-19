@@ -170,7 +170,20 @@ public class MainActivity extends Activity {
     content.addView(bar);line(content);
   }
   void requests(){new AlertDialog.Builder(this).setTitle("Запросы на переписку").setItems(new String[]{"Новый запрос · @aidar.kg","Новый запрос · @bek.kg","Новый запрос · @erlan.kg"},(d,w)->new AlertDialog.Builder(this).setTitle("Запрос").setMessage("Принять запрос на переписку?").setNegativeButton("Отклонить",null).setPositiveButton("Принять",(a,b)->conversation(new String[]{"Айдар","Бек","Эрлан"}[w])).show()).setNegativeButton("Закрыть",null).show();}
-  void newGroup(){EditText input=new EditText(this);input.setHint("Название группы");new AlertDialog.Builder(this).setTitle("Новая группа").setView(input).setNegativeButton("Отмена",null).setPositiveButton("Создать",(d,w)->{String s=input.getText().toString().trim();if(!s.isEmpty()){groups.add(s);persist();show(1);}}).show();}
+  void newGroup(){
+    root=vertical();root.setBackgroundColor(BG);setContentView(root);
+    LinearLayout head=horizontal();pad(head,15,12,15,12);head.addView(button("×",()->show(1)));
+    TextView title=text("Создать группу",18,WHITE,true);title.setGravity(Gravity.CENTER);head.addView(title,new LinearLayout.LayoutParams(0,dp(45),1));root.addView(head);line(root);
+    LinearLayout form=vertical();pad(form,18,30,18,0);root.addView(form);
+    TextView avatar=text("♙+",30,accent,true);avatar.setGravity(Gravity.CENTER);avatar.setBackground(shape(CARD,100));LinearLayout.LayoutParams av=lp(82,82);av.gravity=Gravity.CENTER;av.bottomMargin=dp(23);form.addView(avatar,av);
+    EditText name=new EditText(this);name.setHint("Название группы");name.setTextColor(WHITE);name.setHintTextColor(MUTED);name.setSingleLine();name.setBackground(shape(CARD,12));pad(name,12,10,12,10);form.addView(name,lp(-1,48));
+    EditText description=new EditText(this);description.setHint("Описание (необязательно)");description.setTextColor(WHITE);description.setHintTextColor(MUTED);description.setBackground(shape(CARD,12));pad(description,12,10,12,10);LinearLayout.LayoutParams dp=lp(-1,48);dp.topMargin=dp(10);form.addView(description,dp);
+    TextView label=text("Тип группы",16,WHITE,true);pad(label,0,25,0,12);form.addView(label);
+    RadioGroup group=new RadioGroup(this);RadioButton privateBtn=new RadioButton(this),publicBtn=new RadioButton(this);
+    privateBtn.setText("Закрытая · Вступление по приглашению");publicBtn.setText("Открытая · Могут присоединиться по ссылке");
+    privateBtn.setTextColor(WHITE);publicBtn.setTextColor(WHITE);privateBtn.setButtonTintList(android.content.res.ColorStateList.valueOf(accent));publicBtn.setButtonTintList(android.content.res.ColorStateList.valueOf(accent));group.addView(privateBtn);group.addView(publicBtn);privateBtn.setChecked(true);form.addView(group);
+    TextView create=button("Создать группу",()->{String value=name.getText().toString().trim();if(value.isEmpty()){name.setError("Укажи название");return;}groups.add(value);prefs.edit().putBoolean("group_private_"+value,privateBtn.isChecked()).putString("group_desc_"+value,description.getText().toString()).apply();persist();chatMode="Группы";show(1);});create.setBackground(shape(accent,13));LinearLayout.LayoutParams cp=lp(-1,51);cp.topMargin=dp(26);form.addView(create,cp);
+  }
   void conversation(String name){
     root=vertical();root.setBackgroundColor(BG);setContentView(root);LinearLayout head=horizontal();TextView back=button("‹",()->show(1));head.addView(back);TextView title=text(name,19,WHITE,true);pad(title,15,0,0,0);head.addView(title);pad(head,10,12,0,12);root.addView(head);line(root);
     ScrollView sv=new ScrollView(this);LinearLayout msgs=vertical();pad(msgs,16,15,16,15);sv.addView(msgs);root.addView(sv,new LinearLayout.LayoutParams(-1,0,1));
@@ -254,7 +267,7 @@ public class MainActivity extends Activity {
     content.addView(stats);
     tabs(new String[]{"▦","▤","♧"},profileTab,i->{profileTab=i;show(4);});
     if(profileTab==0){
-      String[] imgs={"avatar_profile.jpg","city.jpg","wheel.jpg","night.jpg","mountain.jpg","city.jpg"};
+      String[] imgs={"avatar_profile.jpg","city.jpg","wheel.jpg","city.jpg","wheel.jpg","city.jpg"};
       for(int r=0;r<2;r++){LinearLayout grid=horizontal();for(int c=0;c<3;c++){ImageView im=photo(imgs[r*3+c],0);LinearLayout.LayoutParams ip=new LinearLayout.LayoutParams(0,dp(127),1);ip.setMargins(dp(1),dp(1),dp(1),dp(1));grid.addView(im,ip);im.setOnClickListener(v->dialog("Публикация","Просмотр фотографии"));}content.addView(grid);}
     }else if(profileTab==1){for(Post p:posts)if(!p.anonymous&&p.author.equals("menly_user"))row(p.text,"Моя публикация",()->comments(p));}
     else row("Сохранённые","Открыть сохранённые публикации",()->saved());
@@ -274,9 +287,19 @@ public class MainActivity extends Activity {
     new AlertDialog.Builder(this).setTitle("Редактировать профиль").setView(form).setNegativeButton("Отмена",null).setPositiveButton("Сохранить",(d,w)->{prefs.edit().putString("display_name",name.getText().toString()).putString("handle",handle.getText().toString()).putString("city",city.getText().toString()).putString("bio",bio.getText().toString()).apply();show(4);}).show();
   }
   void privacy(){
-    String[] choices={"Все пользователи","Только подписчики","Никто"};
-    int current=prefs.getInt("dm_privacy",0);
-    new AlertDialog.Builder(this).setTitle("Кто может мне писать").setSingleChoiceItems(choices,current,(d,i)->{prefs.edit().putInt("dm_privacy",i).apply();d.dismiss();}).setNeutralButton(prefs.getBoolean("online",true)?"Скрыть статус онлайн":"Показывать онлайн",(d,w)->{prefs.edit().putBoolean("online",!prefs.getBoolean("online",true)).apply();}).setNegativeButton("Закрыть",null).show();
+    root=vertical();root.setBackgroundColor(BG);setContentView(root);
+    LinearLayout header=horizontal();pad(header,12,10,12,10);header.addView(button("‹",()->show(4)));
+    TextView title=text("Приватность",19,WHITE,true);title.setGravity(Gravity.CENTER);header.addView(title,new LinearLayout.LayoutParams(0,dp(46),1));root.addView(header);line(root);
+    scroll=new ScrollView(this);content=vertical();scroll.addView(content);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+    row("♧  Номер телефона","Всегда скрыт",()->dialog("Номер телефона","Номер телефона не отображается в профиле"));
+    row("▢  Кто может мне писать",new String[]{"Все пользователи","Только подписчики","Никто"}[prefs.getInt("dm_privacy",0)],()->options("Кто может мне писать",new String[]{"Все пользователи","Только подписчики","Никто"},i->{prefs.edit().putInt("dm_privacy",i).apply();privacy();}));
+    privacyToggle("Показывать мой профиль в рекомендациях","Другие пользователи могут найти меня","discoverable",true);
+    privacyToggle("Использовать моё местоположение","Только для выбора аудитории постов","location",true);
+    privacyToggle("Показывать статус онлайн","Видимость статуса для других","online",true);
+  }
+  void privacyToggle(String label,String description,String key,boolean initial){
+    LinearLayout row=horizontal();pad(row,18,16,18,16);LinearLayout texts=vertical();texts.addView(text(label,14,WHITE,false));TextView sub=text(description,11,MUTED,false);pad(sub,0,5,0,0);texts.addView(sub);row.addView(texts,new LinearLayout.LayoutParams(0,-2,1));
+    Switch sw=new Switch(this);sw.setChecked(prefs.getBoolean(key,initial));sw.setThumbTintList(android.content.res.ColorStateList.valueOf(accent));sw.setOnCheckedChangeListener((v,checked)->prefs.edit().putBoolean(key,checked).apply());row.addView(sw);content.addView(row);line(content);
   }
   void themes(){String[] names={"Бордовый","Розовый","Малиновый","Фиолетовый","Синий","Бирюзовый","Оранжевый","Красный","Коричневый","Серый","Чёрный","Белый"};int[] colors={0xff972b52,0xffd34872,0xffae477f,0xff6b4fc4,0xff3e7dc4,0xff1d9889,0xffde8e38,0xffa13c3c,0xff7c5e45,0xff575757,0xff333333,0xffeeeeee};options("Тема оформления",names,i->{accent=colors[i];prefs.edit().putInt("accent",accent).apply();show(page);});}
   void options(String title,String[] items,Select sel){new AlertDialog.Builder(this).setTitle(title).setItems(items,(d,w)->sel.choose(w)).setNegativeButton("Отмена",null).show();}
