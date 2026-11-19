@@ -15,6 +15,12 @@ import android.widget.*;
 import android.text.InputType;
 import java.util.*;
 import org.json.*;
+import android.widget.ImageView;
+import android.graphics.BitmapFactory;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.GradientDrawable;
+import java.io.InputStream;
 
 public class MainActivity extends Activity {
   final int BG=Color.rgb(9,9,13), CARD=Color.rgb(22,20,27), LINE=Color.rgb(43,39,47), WHITE=Color.WHITE, MUTED=Color.rgb(151,145,156);
@@ -83,14 +89,26 @@ public class MainActivity extends Activity {
   void tabs(String[] names,int selected,Select onSelect){
     LinearLayout tabs=horizontal();for(int i=0;i<names.length;i++){final int k=i;LinearLayout cell=vertical();TextView t=text(names[i],14,i==selected?WHITE:MUTED,i==selected);t.setGravity(Gravity.CENTER);cell.addView(t,lp(-1,45));View under=new View(this);under.setBackgroundColor(i==selected?accent:BG);cell.addView(under,lp(-1,3));tabs.addView(cell,new LinearLayout.LayoutParams(0,-2,1));cell.setOnClickListener(v->onSelect.choose(k));}content.addView(tabs);line(content);
   }
+  ImageView photo(String asset,int radius){
+    ImageView img=new ImageView(this);
+    img.setScaleType(ImageView.ScaleType.CENTER_CROP);
+    try(InputStream stream=getAssets().open(asset)){
+      Bitmap bitmap=BitmapFactory.decodeStream(stream);
+      if(bitmap!=null)img.setImageBitmap(bitmap);
+    }catch(Exception e){img.setBackground(shape(CARD,radius));}
+    img.setClipToOutline(true);
+    img.setBackground(shape(CARD,radius));
+    return img;
+  }
   void postCard(int i){
     Post p=posts.get(i);LinearLayout card=vertical();pad(card,15,15,15,15);
-    LinearLayout top=horizontal();TextView avatar=text(p.anonymous?"◉":"●",24,WHITE,true);avatar.setGravity(Gravity.CENTER);avatar.setBackground(shape(p.anonymous?accent:Color.rgb(80,66,91),50));top.addView(avatar,lp(43,43));
+    LinearLayout top=horizontal();if(p.anonymous){TextView avatar=text("♡",24,WHITE,true);avatar.setGravity(Gravity.CENTER);avatar.setBackground(shape(accent,50));top.addView(avatar,lp(43,43));}
+    else{ImageView avatar=photo(p.author.equals("nurlan.u")?"avatar_nurlan.jpg":"avatar_azamat.jpg",50);top.addView(avatar,lp(43,43));}
     LinearLayout info=vertical();pad(info,11,0,0,0);info.addView(text(p.author,14,WHITE,true));info.addView(text("· "+p.time,12,MUTED,false));top.addView(info,new LinearLayout.LayoutParams(0,-2,1));
     TextView more=text("⋯",25,MUTED,false);top.addView(more);more.setOnClickListener(v->options("Публикация",new String[]{"Скрыть","Пожаловаться"},k->dialog("Публикация","Действие будет доступно после подключения сервера")));
     card.addView(top);TextView body=text(p.text,15,WHITE,false);body.setLineSpacing(dp(4),1);pad(body,54,10,2,12);card.addView(body);
     if(p.anonymous){TextView tags=text("#Бишкек     #Встреча     #Сегодня",12,Color.rgb(223,145,179),false);pad(tags,54,0,0,13);card.addView(tags);}
-    if(p.photos){LinearLayout photos=horizontal();pad(photos,54,0,0,10);TextView a=text("🌇",55,WHITE,false),b=text("🎡",55,WHITE,false);a.setGravity(Gravity.CENTER);b.setGravity(Gravity.CENTER);a.setBackground(shape(Color.rgb(109,72,103),12));b.setBackground(shape(Color.rgb(114,76,102),12));LinearLayout.LayoutParams x=new LinearLayout.LayoutParams(0,dp(140),1);x.setMargins(0,0,dp(5),0);photos.addView(a,x);photos.addView(b,new LinearLayout.LayoutParams(0,dp(140),1));card.addView(photos);}
+    if(p.photos){LinearLayout photos=horizontal();pad(photos,54,0,0,10);ImageView a=photo("city.jpg",12),b=photo("wheel.jpg",12);LinearLayout.LayoutParams x=new LinearLayout.LayoutParams(0,dp(140),1);x.setMargins(0,0,dp(5),0);photos.addView(a,x);photos.addView(b,new LinearLayout.LayoutParams(0,dp(140),1));card.addView(photos);}
     LinearLayout actions=horizontal();pad(actions,54,0,0,0);
     String[] labels={(p.liked?"♥ ":"♡ ")+p.likes,"▢ "+p.comments,"⇄ "+p.reposts,"➤"};for(int k=0;k<4;k++){final int act=k;TextView btn=text(labels[k],13,k==0&&p.liked?accent:MUTED,false);btn.setGravity(Gravity.CENTER);actions.addView(btn,new LinearLayout.LayoutParams(0,dp(38),1));btn.setOnClickListener(v->{if(act==0){p.liked=!p.liked;p.likes+=p.liked?1:-1;persist();show(0);}if(act==1)comments(p);if(act==2){p.reposts++;persist();show(0);}if(act==3)dialog("Поделиться","Публикации пока доступны только внутри демонстрации");});}card.addView(actions);content.addView(card);line(content);
   }
@@ -127,9 +145,9 @@ public class MainActivity extends Activity {
   void chooseMedia(){android.content.Intent intent=new android.content.Intent(android.content.Intent.ACTION_GET_CONTENT);intent.setType("image/*");startActivityForResult(intent,400);}
   @Override protected void onActivityResult(int requestCode,int resultCode,android.content.Intent data){super.onActivityResult(requestCode,resultCode,data);if(requestCode==400&&resultCode==RESULT_OK&&data!=null){Toast.makeText(this,"Фото выбрано. Публикация медиа появится после подключения хранилища.",Toast.LENGTH_LONG).show();}}
   void activity(){heading("Активность");tabs(new String[]{"Все","Лайки","Ответы","Подписки"},0,i->{});row("♥  adi.kaz","Понравилась ваша публикация · 5 мин",()->{});row("▢  bakyt.uz","Ответил на вашу публикацию · 12 мин",()->{});row("♙  erol.kg","Подписался на вас · 23 мин",()->{});row("♥  temir.kgz","И ещё 24 человека лайкнули пост · 1 ч",()->{});}
-  void profile(){View cover=new View(this);cover.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{Color.rgb(74,29,53),BG}));content.addView(cover,lp(-1,125));TextView avatar=text("♙",38,WHITE,false);avatar.setGravity(Gravity.CENTER);avatar.setBackground(shape(accent,55));LinearLayout.LayoutParams a=lp(80,80);a.setMargins(dp(18),dp(-25),0,0);content.addView(avatar,a);
-    TextView name=text("aidar.kg",23,WHITE,true);pad(name,18,10,18,2);content.addView(name);TextView handle=text("Он/его · Бишкек 🇰🇬",13,MUTED,false);pad(handle,18,0,18,15);content.addView(handle);
-    TextView bio=text("Знакомства · Общение · Новые люди 💜\nСпорт · Путешествия · Кино",14,WHITE,false);pad(bio,18,0,18,17);content.addView(bio);
+  void profile(){View cover=new View(this);cover.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{Color.rgb(74,29,53),BG}));content.addView(cover,lp(-1,125));ImageView avatar=photo("avatar_profile.jpg",55);LinearLayout.LayoutParams a=lp(80,80);a.setMargins(dp(18),dp(-25),0,0);content.addView(avatar,a);
+    TextView name=text(prefs.getString("display_name","aidar.kg"),23,WHITE,true);pad(name,18,10,18,2);content.addView(name);TextView handle=text(prefs.getString("handle","@aidar.kg")+" · "+prefs.getString("city","Бишкек")+" 🇰🇬",13,MUTED,false);pad(handle,18,0,18,15);content.addView(handle);
+    TextView bio=text(prefs.getString("bio","Знакомства · Общение · Новые люди 💜\nСпорт · Путешествия · Кино"),14,WHITE,false);pad(bio,18,0,18,17);content.addView(bio);
     LinearLayout buttons=horizontal();pad(buttons,18,0,18,18);buttons.addView(button("Редактировать",()->editProfile()));TextView settings=button("⚙ Настройки",()->settings());LinearLayout.LayoutParams sp=lp(-2,-2);sp.setMargins(dp(9),0,0,0);buttons.addView(settings,sp);content.addView(buttons);TextView stats=text("248 Подписки        1 392 Подписчика        312 Подписки",13,WHITE,true);pad(stats,18,12,18,15);content.addView(stats);tabs(new String[]{"▦","▤","♧"},0,i->{});TextView empty=text("Публикаций пока нет",14,MUTED,false);empty.setGravity(Gravity.CENTER);pad(empty,0,45,0,0);content.addView(empty);
   }
   void settings(){options("Настройки",new String[]{"Конфиденциальность","Оформление","Уведомления","Сохранённое","О Menly"},i->{if(i==0)privacy();if(i==1)themes();if(i==2)notifications();if(i==3)saved();if(i==4)dialog("Menly","Нативное Android-приложение на Java. Firebase ещё не подключён.");});}
