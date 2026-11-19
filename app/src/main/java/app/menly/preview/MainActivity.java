@@ -14,6 +14,7 @@ import android.view.ViewGroup;
 import android.widget.*;
 import android.text.InputType;
 import java.util.*;
+import org.json.*;
 
 public class MainActivity extends Activity {
   final int BG=Color.rgb(9,9,13), CARD=Color.rgb(22,20,27), LINE=Color.rgb(43,39,47), WHITE=Color.WHITE, MUTED=Color.rgb(151,145,156);
@@ -24,7 +25,7 @@ public class MainActivity extends Activity {
   ArrayList<String> groups=new ArrayList<>(Arrays.asList("Парни Бишкека","Друзья Алматы"));
   HashMap<String,ArrayList<String>> messages=new HashMap<>();
   static class Post {
-    String author,time,text; int likes,comments,reposts; boolean liked,anonymous,photos;
+    String author,time,text; long created=System.currentTimeMillis(); int likes,comments,reposts; boolean liked,anonymous,photos;
     Post(String a,String t,String s,int l,int c,int r,boolean an,boolean ph){author=a;time=t;text=s;likes=l;comments=c;reposts=r;anonymous=an;photos=ph;}
   }
   int dp(float x){return (int)(x*getResources().getDisplayMetrics().density+.5f);}
@@ -44,7 +45,23 @@ public class MainActivity extends Activity {
     posts.add(new Post("Анонимный пользователь","2 ч","Кто сегодня в Бишкеке свободен? Хочется приятной компании вечером 🥺",128,34,12,true,false));
     posts.add(new Post("azamat.kg","4 ч","Погода сегодня просто идеальная для прогулки по городу 🌿",256,18,7,false,true));
     posts.add(new Post("nurlan.u","6 ч","Ищу новых друзей в Алматы. Пишите, пообщаемся! 💗",92,11,3,false,false));
-    show(0);
+    restore();show(0);
+  }
+  void persist(){
+    try{
+      JSONArray arr=new JSONArray();
+      for(Post p:posts){JSONObject o=new JSONObject();o.put("author",p.author);o.put("time",p.time);o.put("text",p.text);o.put("likes",p.likes);o.put("comments",p.comments);o.put("reposts",p.reposts);o.put("anonymous",p.anonymous);o.put("photos",p.photos);o.put("liked",p.liked);o.put("created",p.created);arr.put(o);}
+      prefs.edit().putString("posts",arr.toString()).putString("groups",new JSONArray(groups).toString()).apply();
+    }catch(Exception e){}
+  }
+  void restore(){
+    try{
+      String data=prefs.getString("posts",null);
+      if(data!=null){JSONArray arr=new JSONArray(data);posts.clear();for(int i=0;i<arr.length();i++){JSONObject o=arr.getJSONObject(i);Post p=new Post(o.getString("author"),o.getString("time"),o.getString("text"),o.getInt("likes"),o.getInt("comments"),o.getInt("reposts"),o.getBoolean("anonymous"),o.getBoolean("photos"));p.liked=o.optBoolean("liked");p.created=o.optLong("created",System.currentTimeMillis());posts.add(p);}}
+      JSONArray g=new JSONArray(prefs.getString("groups","[]"));if(g.length()>0){groups.clear();for(int i=0;i<g.length();i++)groups.add(g.getString(i));}
+      for(int i=posts.size()-1;i>=0;i--){Post p=posts.get(i);if(p.anonymous&&System.currentTimeMillis()-p.created>=86400000L)posts.remove(i);}
+      persist();
+    }catch(Exception e){}
   }
   void show(int index){
     page=index;root=vertical();root.setBackgroundColor(BG);setContentView(root);
@@ -75,9 +92,9 @@ public class MainActivity extends Activity {
     if(p.anonymous){TextView tags=text("#Бишкек     #Встреча     #Сегодня",12,Color.rgb(223,145,179),false);pad(tags,54,0,0,13);card.addView(tags);}
     if(p.photos){LinearLayout photos=horizontal();pad(photos,54,0,0,10);TextView a=text("🌇",55,WHITE,false),b=text("🎡",55,WHITE,false);a.setGravity(Gravity.CENTER);b.setGravity(Gravity.CENTER);a.setBackground(shape(Color.rgb(109,72,103),12));b.setBackground(shape(Color.rgb(114,76,102),12));LinearLayout.LayoutParams x=new LinearLayout.LayoutParams(0,dp(140),1);x.setMargins(0,0,dp(5),0);photos.addView(a,x);photos.addView(b,new LinearLayout.LayoutParams(0,dp(140),1));card.addView(photos);}
     LinearLayout actions=horizontal();pad(actions,54,0,0,0);
-    String[] labels={(p.liked?"♥ ":"♡ ")+p.likes,"▢ "+p.comments,"⇄ "+p.reposts,"➤"};for(int k=0;k<4;k++){final int act=k;TextView btn=text(labels[k],13,k==0&&p.liked?accent:MUTED,false);btn.setGravity(Gravity.CENTER);actions.addView(btn,new LinearLayout.LayoutParams(0,dp(38),1));btn.setOnClickListener(v->{if(act==0){p.liked=!p.liked;p.likes+=p.liked?1:-1;show(0);}if(act==1)comments(p);if(act==2){p.reposts++;show(0);}if(act==3)dialog("Поделиться","Публикации пока доступны только внутри демонстрации");});}card.addView(actions);content.addView(card);line(content);
+    String[] labels={(p.liked?"♥ ":"♡ ")+p.likes,"▢ "+p.comments,"⇄ "+p.reposts,"➤"};for(int k=0;k<4;k++){final int act=k;TextView btn=text(labels[k],13,k==0&&p.liked?accent:MUTED,false);btn.setGravity(Gravity.CENTER);actions.addView(btn,new LinearLayout.LayoutParams(0,dp(38),1));btn.setOnClickListener(v->{if(act==0){p.liked=!p.liked;p.likes+=p.liked?1:-1;persist();show(0);}if(act==1)comments(p);if(act==2){p.reposts++;persist();show(0);}if(act==3)dialog("Поделиться","Публикации пока доступны только внутри демонстрации");});}card.addView(actions);content.addView(card);line(content);
   }
-  void comments(Post p){EditText input=new EditText(this);input.setHint("Написать комментарий");new AlertDialog.Builder(this).setTitle("Комментарии · "+p.comments).setView(input).setNegativeButton("Отмена",null).setPositiveButton("Отправить",(d,w)->{if(input.getText().length()>0){p.comments++;show(0);}}).show();}
+  void comments(Post p){EditText input=new EditText(this);input.setHint("Написать комментарий");new AlertDialog.Builder(this).setTitle("Комментарии · "+p.comments).setView(input).setNegativeButton("Отмена",null).setPositiveButton("Отправить",(d,w)->{if(input.getText().length()>0){p.comments++;persist();show(0);}}).show();}
   void chats(){heading("Чаты");chatTabs();
     EditText search=new EditText(this);search.setSingleLine();search.setTextColor(WHITE);search.setHintTextColor(MUTED);search.setHint("Поиск");search.setBackground(shape(CARD,13));pad(search,15,9,15,9);LinearLayout.LayoutParams sp=lp(-1,48);sp.setMargins(dp(18),dp(15),dp(18),dp(10));content.addView(search,sp);
     if(chatMode.equals("Группы"))row("＋ Создать группу","Публичная или приватная",()->newGroup());
@@ -91,19 +108,21 @@ public class MainActivity extends Activity {
     TextView req=button("Запросы  3",()->requests());bar.addView(req);content.addView(bar);line(content);
   }
   void requests(){new AlertDialog.Builder(this).setTitle("Запросы на переписку").setItems(new String[]{"Новый запрос · @aidar.kg","Новый запрос · @bek.kg","Новый запрос · @erlan.kg"},(d,w)->new AlertDialog.Builder(this).setTitle("Запрос").setMessage("Принять запрос на переписку?").setNegativeButton("Отклонить",null).setPositiveButton("Принять",(a,b)->conversation(new String[]{"Айдар","Бек","Эрлан"}[w])).show()).setNegativeButton("Закрыть",null).show();}
-  void newGroup(){EditText input=new EditText(this);input.setHint("Название группы");new AlertDialog.Builder(this).setTitle("Новая группа").setView(input).setNegativeButton("Отмена",null).setPositiveButton("Создать",(d,w)->{String s=input.getText().toString().trim();if(!s.isEmpty()){groups.add(s);show(1);}}).show();}
+  void newGroup(){EditText input=new EditText(this);input.setHint("Название группы");new AlertDialog.Builder(this).setTitle("Новая группа").setView(input).setNegativeButton("Отмена",null).setPositiveButton("Создать",(d,w)->{String s=input.getText().toString().trim();if(!s.isEmpty()){groups.add(s);persist();show(1);}}).show();}
   void conversation(String name){
     root=vertical();root.setBackgroundColor(BG);setContentView(root);LinearLayout head=horizontal();TextView back=button("‹",()->show(1));head.addView(back);TextView title=text(name,19,WHITE,true);pad(title,15,0,0,0);head.addView(title);pad(head,10,12,0,12);root.addView(head);line(root);
     ScrollView sv=new ScrollView(this);LinearLayout msgs=vertical();pad(msgs,16,15,16,15);sv.addView(msgs);root.addView(sv,new LinearLayout.LayoutParams(-1,0,1));
-    ArrayList<String> history=messages.computeIfAbsent(name,k->new ArrayList<>());if(history.isEmpty())history.add("Привет! Как дела?");
+    ArrayList<String> history=messages.computeIfAbsent(name,k->new ArrayList<>());
+    if(history.isEmpty()){try{JSONArray saved=new JSONArray(prefs.getString("chat_"+name,"[]"));for(int j=0;j<saved.length();j++)history.add(saved.getString(j));}catch(Exception e){}}
+    if(history.isEmpty())history.add("Привет! Как дела?");
     for(String m:history){TextView bubble=text(m,15,WHITE,false);pad(bubble,14,11,14,11);bubble.setBackground(shape(CARD,16));LinearLayout.LayoutParams b=lp(-2,-2);b.setMargins(0,0,0,dp(10));msgs.addView(bubble,b);}
-    LinearLayout compose=horizontal();pad(compose,10,7,10,12);EditText entry=new EditText(this);entry.setSingleLine();entry.setTextColor(WHITE);entry.setHint("Сообщение");entry.setHintTextColor(MUTED);entry.setBackground(shape(CARD,22));pad(entry,13,9,13,9);compose.addView(entry,new LinearLayout.LayoutParams(0,dp(46),1));TextView send=button("➤",()->{String m=entry.getText().toString().trim();if(!m.isEmpty()){history.add(m);conversation(name);}});compose.addView(send);root.addView(compose);
+    LinearLayout compose=horizontal();pad(compose,10,7,10,12);EditText entry=new EditText(this);entry.setSingleLine();entry.setTextColor(WHITE);entry.setHint("Сообщение");entry.setHintTextColor(MUTED);entry.setBackground(shape(CARD,22));pad(entry,13,9,13,9);compose.addView(entry,new LinearLayout.LayoutParams(0,dp(46),1));TextView send=button("➤",()->{String m=entry.getText().toString().trim();if(!m.isEmpty()){history.add(m);prefs.edit().putString("chat_"+name,new JSONArray(history).toString()).apply();conversation(name);}});compose.addView(send);root.addView(compose);
   }
   void create(){heading("Новая публикация");EditText field=new EditText(this);field.setId(881);field.setTextColor(WHITE);field.setHintTextColor(MUTED);field.setHint("О чём думаешь?");field.setGravity(Gravity.TOP);field.setMinLines(7);field.setBackground(shape(CARD,15));pad(field,16,15,16,15);LinearLayout.LayoutParams f=lp(-1,-2);f.setMargins(dp(18),0,dp(18),dp(10));content.addView(field,f);
     row("Анонимная публикация",anon?"Включено · исчезнет через 24 часа":"Выключено",()->{anon=!anon;String s=field.getText().toString();show(2);((EditText)findViewById(881)).setText(s);});
     row("Кто увидит публикацию",audience,()->options("Аудитория",new String[]{"Вся Центральная Азия","Моя страна","1 км","5 км","10 км","25 км","50 км","100 км"},i->{audience=new String[]{"Вся Центральная Азия","Моя страна","1 км","5 км","10 км","25 км","50 км","100 км"}[i];String s=field.getText().toString();show(2);((EditText)findViewById(881)).setText(s);}));
     row("Добавить фото или видео","Выбрать из галереи",()->chooseMedia());
-    TextView publish=button("Опубликовать",()->{String s=field.getText().toString().trim();if(s.isEmpty()){Toast.makeText(this,"Напиши текст",Toast.LENGTH_SHORT).show();return;}posts.add(0,new Post(anon?"Анонимный пользователь":"menly_user","сейчас",s,0,0,0,anon,false));anon=false;show(0);});publish.setBackground(shape(accent,14));LinearLayout.LayoutParams p=lp(-1,52);p.setMargins(dp(18),dp(20),dp(18),0);content.addView(publish,p);
+    TextView publish=button("Опубликовать",()->{String s=field.getText().toString().trim();if(s.isEmpty()){Toast.makeText(this,"Напиши текст",Toast.LENGTH_SHORT).show();return;}posts.add(0,new Post(anon?"Анонимный пользователь":"menly_user","сейчас",s,0,0,0,anon,false));anon=false;persist();show(0);});publish.setBackground(shape(accent,14));LinearLayout.LayoutParams p=lp(-1,52);p.setMargins(dp(18),dp(20),dp(18),0);content.addView(publish,p);
   }
   void chooseMedia(){android.content.Intent intent=new android.content.Intent(android.content.Intent.ACTION_GET_CONTENT);intent.setType("image/*");startActivityForResult(intent,400);}
   @Override protected void onActivityResult(int requestCode,int resultCode,android.content.Intent data){super.onActivityResult(requestCode,resultCode,data);if(requestCode==400&&resultCode==RESULT_OK&&data!=null){Toast.makeText(this,"Фото выбрано. Публикация медиа появится после подключения хранилища.",Toast.LENGTH_LONG).show();}}
@@ -114,7 +133,11 @@ public class MainActivity extends Activity {
     LinearLayout buttons=horizontal();pad(buttons,18,0,18,18);buttons.addView(button("Редактировать",()->dialog("Профиль","Редактирование аккаунта добавим после Firebase")));TextView settings=button("⚙ Настройки",()->settings());LinearLayout.LayoutParams sp=lp(-2,-2);sp.setMargins(dp(9),0,0,0);buttons.addView(settings,sp);content.addView(buttons);TextView stats=text("248 Подписки        1 392 Подписчика        312 Подписки",13,WHITE,true);pad(stats,18,12,18,15);content.addView(stats);tabs(new String[]{"▦","▤","♧"},0,i->{});TextView empty=text("Публикаций пока нет",14,MUTED,false);empty.setGravity(Gravity.CENTER);pad(empty,0,45,0,0);content.addView(empty);
   }
   void settings(){options("Настройки",new String[]{"Конфиденциальность","Оформление","Уведомления","О Menly"},i->{if(i==0)privacy();if(i==1)themes();if(i==2)dialog("Уведомления","Настройки уведомлений будут доступны позднее");if(i==3)dialog("Menly","Нативный Android-прототип на Java. Без веб-интерфейса и Firebase.");});}
-  void privacy(){options("Приватность",new String[]{"Кто может писать: все","Только подписчики","Никто","Скрыть статус онлайн"},i->dialog("Приватность","Эти настройки начнут действовать после подключения Firebase. Номера телефонов и точные расстояния не отображаются."));}
+  void privacy(){
+    String[] choices={"Все пользователи","Только подписчики","Никто"};
+    int current=prefs.getInt("dm_privacy",0);
+    new AlertDialog.Builder(this).setTitle("Кто может мне писать").setSingleChoiceItems(choices,current,(d,i)->{prefs.edit().putInt("dm_privacy",i).apply();d.dismiss();}).setNeutralButton(prefs.getBoolean("online",true)?"Скрыть статус онлайн":"Показывать онлайн",(d,w)->{prefs.edit().putBoolean("online",!prefs.getBoolean("online",true)).apply();}).setNegativeButton("Закрыть",null).show();
+  }
   void themes(){String[] names={"Бордовый","Розовый","Малиновый","Фиолетовый","Синий","Бирюзовый","Оранжевый","Красный","Коричневый","Серый","Чёрный","Белый"};int[] colors={0xff972b52,0xffd34872,0xffae477f,0xff6b4fc4,0xff3e7dc4,0xff1d9889,0xffde8e38,0xffa13c3c,0xff7c5e45,0xff575757,0xff333333,0xffeeeeee};options("Тема оформления",names,i->{accent=colors[i];prefs.edit().putInt("accent",accent).apply();show(page);});}
   void options(String title,String[] items,Select sel){new AlertDialog.Builder(this).setTitle(title).setItems(items,(d,w)->sel.choose(w)).setNegativeButton("Отмена",null).show();}
   void dialog(String title,String msg){new AlertDialog.Builder(this).setTitle(title).setMessage(msg).setPositiveButton("OK",null).show();}
