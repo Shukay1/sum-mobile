@@ -220,11 +220,44 @@ public class MainActivity extends Activity {
       if(requestCode==400){selectedMedia=data.getData().toString();Toast.makeText(this,"Фото добавлено к публикации",Toast.LENGTH_SHORT).show();}
       if(requestCode==402){Toast.makeText(this,"История выбрана. Публикация историй потребует сервер.",Toast.LENGTH_SHORT).show();}
     }}
-  void activity(){heading("Активность");tabs(new String[]{"Все","Лайки","Ответы","Подписки"},0,i->{});row("♥  adi.kaz","Понравилась ваша публикация · 5 мин",()->{});row("▢  bakyt.uz","Ответил на вашу публикацию · 12 мин",()->{});row("♙  erol.kg","Подписался на вас · 23 мин",()->{});row("♥  temir.kgz","И ещё 24 человека лайкнули пост · 1 ч",()->{});}
-  void profile(){View cover=new View(this);cover.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{Color.rgb(74,29,53),BG}));content.addView(cover,lp(-1,125));ImageView avatar=photo("avatar_profile.jpg",55);LinearLayout.LayoutParams a=lp(80,80);a.setMargins(dp(18),dp(-25),0,0);content.addView(avatar,a);
-    TextView name=text(prefs.getString("display_name","aidar.kg"),23,WHITE,true);pad(name,18,10,18,2);content.addView(name);TextView handle=text(prefs.getString("handle","@aidar.kg")+" · "+prefs.getString("city","Бишкек")+" 🇰🇬",13,MUTED,false);pad(handle,18,0,18,15);content.addView(handle);
-    TextView bio=text(prefs.getString("bio","Знакомства · Общение · Новые люди 💜\nСпорт · Путешествия · Кино"),14,WHITE,false);pad(bio,18,0,18,17);content.addView(bio);
-    LinearLayout buttons=horizontal();pad(buttons,18,0,18,18);buttons.addView(button("Редактировать",()->editProfile()));TextView settings=button("⚙ Настройки",()->settings());LinearLayout.LayoutParams sp=lp(-2,-2);sp.setMargins(dp(9),0,0,0);buttons.addView(settings,sp);content.addView(buttons);TextView stats=text("248 Подписки        1 392 Подписчика        312 Подписки",13,WHITE,true);pad(stats,18,12,18,15);content.addView(stats);tabs(new String[]{"▦","▤","♧"},0,i->{});TextView empty=text("Публикаций пока нет",14,MUTED,false);empty.setGravity(Gravity.CENTER);pad(empty,0,45,0,0);content.addView(empty);
+  void activity(){
+    heading("Лайки");
+    String[] filters={"Все","Лайки","Ответы","Подписки"};
+    LinearLayout bar=horizontal();pad(bar,13,2,13,15);
+    for(int i=0;i<filters.length;i++){final int k=i;TextView chip=button(filters[i],()->{activityFilter=k;show(3);});chip.setTextSize(12);chip.setBackground(shape(i==activityFilter?accent:CARD,24));LinearLayout.LayoutParams c=new LinearLayout.LayoutParams(0,dp(38),1);c.setMargins(dp(3),0,dp(3),0);bar.addView(chip,c);}content.addView(bar);
+    String[] names={"adi.kaz","bakyt.uz","erol.kg","temir.kgz","sanzhar.kaz"};
+    String[] descriptions={"поставил(а) лайк вашему посту · 5 мин","ответил(а) на ваш пост: «Полностью согласен!» · 12 мин","подписался(ась) на вас · 23 мин","и ещё 24 человека лайкнули вашу публикацию · 1 ч","сделал(а) репост · 2 ч"};
+    int[] types={1,2,3,1,0};
+    String[] avatars={"avatar_azamat.jpg","avatar_nurlan.jpg","avatar_emir.jpg","avatar_profile.jpg","avatar_azamat.jpg"};
+    for(int i=0;i<names.length;i++){
+      if(activityFilter!=0&&activityFilter!=types[i])continue;
+      final String name=names[i];LinearLayout r=horizontal();pad(r,16,13,16,13);r.addView(photo(avatars[i],100),lp(45,45));
+      LinearLayout details=vertical();pad(details,11,0,0,0);details.addView(text(name,14,WHITE,true));
+      TextView desc=text(descriptions[i],12,MUTED,false);pad(desc,0,5,0,0);details.addView(desc);
+      r.addView(details,new LinearLayout.LayoutParams(0,-2,1));
+      TextView symbol=text(types[i]==1?"♥":types[i]==2?"▢":types[i]==3?"♙":"⇄",19,types[i]==1?0xfffa476f:accent,true);r.addView(symbol);
+      content.addView(r);line(content);r.setOnClickListener(v->dialog("Активность",name+" · "+descriptions[0]));
+    }
+  }
+  void profile(){
+    LinearLayout top=horizontal();pad(top,18,17,18,15);
+    ImageView avatar=photo("avatar_profile.jpg",100);top.addView(avatar,lp(83,83));
+    LinearLayout info=vertical();pad(info,13,5,0,0);
+    info.addView(text(prefs.getString("display_name","aidar.kg"),22,WHITE,true));
+    TextView handle=text(prefs.getString("handle","Он/его"),13,MUTED,false);pad(handle,0,5,0,0);info.addView(handle);
+    top.addView(info,new LinearLayout.LayoutParams(0,-2,1));
+    TextView setting=button("⚙",()->settings());top.addView(setting);content.addView(top);
+    TextView bio=text(prefs.getString("bio","Бишкек 🇰🇬\nЗнакомства · Общение · Новые люди 💜\nСпорт · Путешествия · Кино"),14,WHITE,false);pad(bio,18,5,18,14);content.addView(bio);
+    TextView edit=button("Редактировать профиль",()->editProfile());LinearLayout.LayoutParams ep=lp(-1,44);ep.setMargins(dp(18),0,dp(18),dp(19));content.addView(edit,ep);
+    LinearLayout stats=horizontal();String[] counts={"248","1 392","312"},labels={"Публикаций","Подписчики","Подписки"};
+    for(int i=0;i<3;i++){LinearLayout cell=vertical();cell.setGravity(Gravity.CENTER);TextView number=text(counts[i],17,WHITE,true);number.setGravity(Gravity.CENTER);cell.addView(number);TextView label=text(labels[i],11,MUTED,false);label.setGravity(Gravity.CENTER);cell.addView(label);stats.addView(cell,new LinearLayout.LayoutParams(0,dp(55),1));}
+    content.addView(stats);
+    tabs(new String[]{"▦","▤","♧"},profileTab,i->{profileTab=i;show(4);});
+    if(profileTab==0){
+      String[] imgs={"avatar_profile.jpg","city.jpg","wheel.jpg","night.jpg","mountain.jpg","city.jpg"};
+      for(int r=0;r<2;r++){LinearLayout grid=horizontal();for(int c=0;c<3;c++){ImageView im=photo(imgs[r*3+c],0);LinearLayout.LayoutParams ip=new LinearLayout.LayoutParams(0,dp(127),1);ip.setMargins(dp(1),dp(1),dp(1),dp(1));grid.addView(im,ip);im.setOnClickListener(v->dialog("Публикация","Просмотр фотографии"));}content.addView(grid);}
+    }else if(profileTab==1){for(Post p:posts)if(!p.anonymous&&p.author.equals("menly_user"))row(p.text,"Моя публикация",()->comments(p));}
+    else row("Сохранённые","Открыть сохранённые публикации",()->saved());
   }
   void settings(){options("Настройки",new String[]{"Конфиденциальность","Оформление","Уведомления","Сохранённое","О Menly"},i->{if(i==0)privacy();if(i==1)themes();if(i==2)notifications();if(i==3)saved();if(i==4)dialog("Menly","Нативное Android-приложение на Java. Firebase ещё не подключён.");});}
   void notifications(){new AlertDialog.Builder(this).setTitle("Уведомления").setItems(new String[]{"Все","Упоминания","Подписки","Сообщения"},(d,i)->dialog("Уведомления","События будут появляться здесь после подключения Firebase")).setPositiveButton("Готово",null).show();}
