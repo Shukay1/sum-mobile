@@ -134,15 +134,25 @@ public class MainActivity extends Activity {
   void comments(Post p){EditText input=new EditText(this);input.setHint("Написать комментарий");new AlertDialog.Builder(this).setTitle("Комментарии · "+p.comments).setView(input).setNegativeButton("Отмена",null).setPositiveButton("Отправить",(d,w)->{if(input.getText().length()>0){p.comments++;persist();show(0);}}).show();}
   void chats(){heading("Чаты");chatTabs();
     EditText search=new EditText(this);search.setSingleLine();search.setTextColor(WHITE);search.setHintTextColor(MUTED);search.setHint("Поиск");search.setBackground(shape(CARD,13));pad(search,15,9,15,9);LinearLayout.LayoutParams sp=lp(-1,48);sp.setMargins(dp(18),dp(15),dp(18),dp(10));content.addView(search,sp);
+    if(chatMode.equals("Запросы")){row("Айдар · Новый запрос","Нажми, чтобы принять или отклонить",()->requests());row("Бек · Новый запрос","Нажми, чтобы принять или отклонить",()->requests());return;}
     if(chatMode.equals("Группы"))row("＋ Создать группу","Публичная или приватная",()->newGroup());
-    String[] names=chatMode.equals("Группы")?groups.toArray(new String[0]):new String[]{"Азамат","Нурлан","Эмир"};
-    for(String n:names)row(n,chatMode.equals("Группы")?"Групповой чат":"Нажми, чтобы открыть переписку",()->conversation(n));
+    String[] names=chatMode.equals("Группы")?groups.toArray(new String[0]):new String[]{"Азамат","Бек","Нурлан","Эмир","Руслан"};
+    String[] previews={"Привет! Как дела? 😄","Отправил фото","Давай вечером пообщаемся?","Стикер","Спасибо! 💜"};
+    String[] assets={"avatar_azamat.jpg","avatar_nurlan.jpg","avatar_emir.jpg","avatar_profile.jpg","avatar_azamat.jpg"};
+    for(int j=0;j<names.length;j++){
+      final String n=names[j];LinearLayout lineRow=horizontal();pad(lineRow,18,12,18,12);
+      ImageView av=photo(assets[j%assets.length],100);lineRow.addView(av,lp(52,52));
+      LinearLayout info=vertical();pad(info,13,0,0,0);info.addView(text(n,15,WHITE,true));TextView preview=text(chatMode.equals("Группы")?"Групповой чат":previews[j%previews.length],12,MUTED,false);pad(preview,0,5,0,0);info.addView(preview);
+      lineRow.addView(info,new LinearLayout.LayoutParams(0,-2,1));
+      lineRow.addView(text(j==0?"14:32":"Вчера",11,MUTED,false));
+      content.addView(lineRow);line(content);lineRow.setOnClickListener(v->conversation(n));
+    }
   }
   void chatTabs(){
     LinearLayout bar=horizontal();pad(bar,16,4,16,8);
-    String[] labels={"Личные","Группы"};
-    for(int i=0;i<2;i++){final int k=i;boolean active=chatMode.equals(labels[i]);TextView tab=text(labels[i],14,active?WHITE:MUTED,active);tab.setGravity(Gravity.CENTER);tab.setBackground(shape(active?accent:CARD,18));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(40),1);p.setMargins(0,0,dp(7),0);bar.addView(tab,p);tab.setOnClickListener(v->{chatMode=labels[k];show(1);});}
-    TextView req=button("Запросы  3",()->requests());bar.addView(req);content.addView(bar);line(content);
+    String[] labels={"Личные","Группы","Запросы"};
+    for(int i=0;i<3;i++){final int k=i;boolean active=chatMode.equals(labels[i]);TextView tab=text(labels[i],14,active?WHITE:MUTED,active);tab.setGravity(Gravity.CENTER);tab.setBackground(shape(active?accent:CARD,18));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(40),1);p.setMargins(0,0,dp(7),0);bar.addView(tab,p);tab.setOnClickListener(v->{chatMode=labels[k];show(1);});}
+    content.addView(bar);line(content);
   }
   void requests(){new AlertDialog.Builder(this).setTitle("Запросы на переписку").setItems(new String[]{"Новый запрос · @aidar.kg","Новый запрос · @bek.kg","Новый запрос · @erlan.kg"},(d,w)->new AlertDialog.Builder(this).setTitle("Запрос").setMessage("Принять запрос на переписку?").setNegativeButton("Отклонить",null).setPositiveButton("Принять",(a,b)->conversation(new String[]{"Айдар","Бек","Эрлан"}[w])).show()).setNegativeButton("Закрыть",null).show();}
   void newGroup(){EditText input=new EditText(this);input.setHint("Название группы");new AlertDialog.Builder(this).setTitle("Новая группа").setView(input).setNegativeButton("Отмена",null).setPositiveButton("Создать",(d,w)->{String s=input.getText().toString().trim();if(!s.isEmpty()){groups.add(s);persist();show(1);}}).show();}
