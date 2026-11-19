@@ -98,7 +98,6 @@ public class MainActivity extends Activity {
   void feed(){
     LinearLayout bar=horizontal();pad(bar,20,12,20,8);TextView logo=text("♡",34,accent,true);bar.addView(logo,new LinearLayout.LayoutParams(0,dp(46),1));TextView bell=button("♧",()->notifications());bar.addView(bell);content.addView(bar);
     tabs(new String[]{"Для тебя","Подписки"},0,i->{if(i==1)dialog("Подписки","Подписки будут синхронизироваться после подключения сервера");});
-    stories();
     for(int i=0;i<posts.size();i++)postCard(i);
   }
   void stories(){
@@ -148,7 +147,7 @@ public class MainActivity extends Activity {
   }
   void comments(Post p){EditText input=new EditText(this);input.setHint("Написать комментарий");new AlertDialog.Builder(this).setTitle("Комментарии · "+p.comments).setView(input).setNegativeButton("Отмена",null).setPositiveButton("Отправить",(d,w)->{if(input.getText().length()>0){p.comments++;persist();show(0);}}).show();}
   void chats(){heading("Чаты");chatTabs();
-    EditText search=new EditText(this);search.setSingleLine();search.setTextColor(WHITE);search.setHintTextColor(MUTED);search.setHint("Поиск");search.setBackground(shape(CARD,13));pad(search,15,9,15,9);LinearLayout.LayoutParams sp=lp(-1,48);sp.setMargins(dp(18),dp(15),dp(18),dp(10));content.addView(search,sp);
+
     if(chatMode.equals("Запросы")){row("Айдар · Новый запрос","Нажми, чтобы принять или отклонить",()->requests());row("Бек · Новый запрос","Нажми, чтобы принять или отклонить",()->requests());return;}
     if(chatMode.equals("Группы"))row("＋ Создать группу","Публичная или приватная",()->newGroup());
     String[] names=chatMode.equals("Группы")?groups.toArray(new String[0]):new String[]{"Азамат","Бек","Нурлан","Эмир","Руслан"};
