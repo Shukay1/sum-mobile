@@ -18,6 +18,9 @@ import org.json.*;
 import android.widget.ImageView;
 import android.graphics.BitmapFactory;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.GradientDrawable;
 import java.io.InputStream;
@@ -74,10 +77,22 @@ public class MainActivity extends Activity {
     scroll=new ScrollView(this);scroll.setFillViewport(true);content=vertical();scroll.addView(content);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
     if(index==0)feed();if(index==1)chats();if(index==2)create();if(index==3)activity();if(index==4)profile();bottom();
   }
+  class NavIcon extends View{
+    final int type;final Paint paint=new Paint(3);NavIcon(int n){super(MainActivity.this);type=n;setContentDescription(new String[]{"Лента","Чаты","Создать","Активность","Профиль"}[n]);}
+    @Override protected void onDraw(Canvas c){super.onDraw(c);float cx=getWidth()/2f,cy=getHeight()/2f,unit=dp(1);c.save();c.translate(cx,cy);c.scale(unit,unit);
+      paint.setColor(type==page?accent:MUTED);paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(2.1f);paint.setStrokeCap(Paint.Cap.ROUND);paint.setStrokeJoin(Paint.Join.ROUND);
+      Path p=new Path();
+      if(type==0){p.moveTo(-11,-1);p.lineTo(0,-11);p.lineTo(11,-1);p.lineTo(11,11);p.lineTo(3,11);p.lineTo(3,3);p.lineTo(-3,3);p.lineTo(-3,11);p.lineTo(-11,11);p.close();c.drawPath(p,paint);}
+      if(type==1){c.drawRoundRect(-11,-10,11,8,7,7,paint);p.moveTo(-4,8);p.lineTo(-9,13);p.lineTo(-8,5);c.drawPath(p,paint);}
+      if(type==2){c.drawRoundRect(-11,-11,11,11,5,5,paint);c.drawLine(-6,0,6,0,paint);c.drawLine(0,-6,0,6,paint);}
+      if(type==3){p.moveTo(0,11);p.cubicTo(-4,7,-12,1,-11,-5);p.cubicTo(-10,-13,-2,-13,0,-7);p.cubicTo(4,-13,12,-13,11,-5);p.cubicTo(12,1,4,7,0,11);c.drawPath(p,paint);}
+      if(type==4){c.drawCircle(0,-6,5,paint);c.drawArc(-11,1,11,15,190,160,false,paint);}
+      c.restore();
+    }
+  }
   void bottom(){
     line(root);nav=horizontal();nav.setBackgroundColor(BG);
-    String[] icons={"⌂","♧","⊞","♡","♙"};
-    for(int i=0;i<5;i++){final int n=i;TextView b=text(icons[i],29,i==page?accent:MUTED,false);b.setGravity(Gravity.CENTER);nav.addView(b,new LinearLayout.LayoutParams(0,dp(62),1));b.setOnClickListener(v->show(n));}
+    for(int i=0;i<5;i++){final int n=i;NavIcon b=new NavIcon(i);nav.addView(b,new LinearLayout.LayoutParams(0,dp(62),1));b.setOnClickListener(v->show(n));}
     root.addView(nav);
   }
   void feed(){
