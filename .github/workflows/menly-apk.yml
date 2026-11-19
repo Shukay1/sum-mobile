@@ -28,6 +28,20 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Bundle portrait and city photography
+        shell: bash
+        run: |
+          mkdir -p app/src/main/assets
+          fetch_photo() {
+            curl -fLsS --retry 3 --max-time 35 "$2" -o "app/src/main/assets/$1" || true
+          }
+          fetch_photo avatar_azamat.jpg "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&q=85"
+          fetch_photo avatar_nurlan.jpg "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&q=85"
+          fetch_photo avatar_emir.jpg "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=85"
+          fetch_photo avatar_profile.jpg "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=500&q=85"
+          fetch_photo city.jpg "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=900&q=90"
+          fetch_photo wheel.jpg "https://images.unsplash.com/photo-1533158326339-7f3cf2404354?w=900&q=90"
+          ls -lh app/src/main/assets
       - name: Build APK
         run: gradle --no-daemon --stacktrace assembleDebug
       - name: Upload Menly APK
