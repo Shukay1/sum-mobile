@@ -24,14 +24,14 @@ import java.io.InputStream;
 
 public class MainActivity extends Activity {
   final int BG=Color.rgb(9,9,13), CARD=Color.rgb(22,20,27), LINE=Color.rgb(43,39,47), WHITE=Color.WHITE, MUTED=Color.rgb(151,145,156);
-  int accent=Color.rgb(151,43,80), page=0; boolean anon=false; String audience="Вся Центральная Азия", chatMode="Личные";
+  int accent=Color.rgb(184,61,255), page=0; boolean anon=false; String selectedMedia=""; String audience="Вся Центральная Азия", chatMode="Личные";
   LinearLayout root,content,nav; ScrollView scroll;
   SharedPreferences prefs;
   ArrayList<Post> posts=new ArrayList<>();
   ArrayList<String> groups=new ArrayList<>(Arrays.asList("Парни Бишкека","Друзья Алматы"));
   HashMap<String,ArrayList<String>> messages=new HashMap<>();
   static class Post {
-    String author,time,text; long created=System.currentTimeMillis(); int likes,comments,reposts; boolean liked,anonymous,photos;
+    String author,time,text,media=""; long created=System.currentTimeMillis(); int likes,comments,reposts; boolean liked,anonymous,photos;
     Post(String a,String t,String s,int l,int c,int r,boolean an,boolean ph){author=a;time=t;text=s;likes=l;comments=c;reposts=r;anonymous=an;photos=ph;}
   }
   int dp(float x){return (int)(x*getResources().getDisplayMetrics().density+.5f);}
@@ -56,14 +56,14 @@ public class MainActivity extends Activity {
   void persist(){
     try{
       JSONArray arr=new JSONArray();
-      for(Post p:posts){JSONObject o=new JSONObject();o.put("author",p.author);o.put("time",p.time);o.put("text",p.text);o.put("likes",p.likes);o.put("comments",p.comments);o.put("reposts",p.reposts);o.put("anonymous",p.anonymous);o.put("photos",p.photos);o.put("liked",p.liked);o.put("created",p.created);arr.put(o);}
+      for(Post p:posts){JSONObject o=new JSONObject();o.put("author",p.author);o.put("time",p.time);o.put("text",p.text);o.put("likes",p.likes);o.put("comments",p.comments);o.put("reposts",p.reposts);o.put("anonymous",p.anonymous);o.put("photos",p.photos);o.put("liked",p.liked);o.put("created",p.created);o.put("media",p.media);arr.put(o);}
       prefs.edit().putString("posts",arr.toString()).putString("groups",new JSONArray(groups).toString()).apply();
     }catch(Exception e){}
   }
   void restore(){
     try{
       String data=prefs.getString("posts",null);
-      if(data!=null){JSONArray arr=new JSONArray(data);posts.clear();for(int i=0;i<arr.length();i++){JSONObject o=arr.getJSONObject(i);Post p=new Post(o.getString("author"),o.getString("time"),o.getString("text"),o.getInt("likes"),o.getInt("comments"),o.getInt("reposts"),o.getBoolean("anonymous"),o.getBoolean("photos"));p.liked=o.optBoolean("liked");p.created=o.optLong("created",System.currentTimeMillis());posts.add(p);}}
+      if(data!=null){JSONArray arr=new JSONArray(data);posts.clear();for(int i=0;i<arr.length();i++){JSONObject o=arr.getJSONObject(i);Post p=new Post(o.getString("author"),o.getString("time"),o.getString("text"),o.getInt("likes"),o.getInt("comments"),o.getInt("reposts"),o.getBoolean("anonymous"),o.getBoolean("photos"));p.liked=o.optBoolean("liked");p.created=o.optLong("created",System.currentTimeMillis());p.media=o.optString("media","");posts.add(p);}}
       JSONArray g=new JSONArray(prefs.getString("groups","[]"));if(g.length()>0){groups.clear();for(int i=0;i<g.length();i++)groups.add(g.getString(i));}
       for(int i=posts.size()-1;i>=0;i--){Post p=posts.get(i);if(p.anonymous&&System.currentTimeMillis()-p.created>=86400000L)posts.remove(i);}
       persist();
@@ -82,9 +82,25 @@ public class MainActivity extends Activity {
   }
   void feed(){
     LinearLayout bar=horizontal();pad(bar,20,12,20,8);TextView logo=text("♡",34,accent,true);bar.addView(logo,new LinearLayout.LayoutParams(0,dp(46),1));TextView bell=button("♧",()->notifications());bar.addView(bell);content.addView(bar);
-    tabs(new String[]{"Для тебя","Подписки"},0,i->{if(i==1)dialog("Подписки","Публикации подписок появятся после подключения аккаунтов");});
+    tabs(new String[]{"Для тебя","Подписки"},0,i->{if(i==1)dialog("Подписки","Подписки будут синхронизироваться после подключения сервера");});
+    stories();
     for(int i=0;i<posts.size();i++)postCard(i);
   }
+  void stories(){
+    HorizontalScrollView sc=new HorizontalScrollView(this);sc.setHorizontalScrollBarEnabled(false);
+    LinearLayout strip=horizontal();pad(strip,14,15,14,15);
+    String[] names={"Твои истории","Азамат","Бек","Эмир","Руслан"};
+    String[] pics={"avatar_profile.jpg","avatar_azamat.jpg","avatar_nurlan.jpg","avatar_emir.jpg","avatar_profile.jpg"};
+    for(int i=0;i<names.length;i++){
+      final int n=i;LinearLayout item=vertical();item.setGravity(Gravity.CENTER);
+      ImageView avatar=photo(pics[i],100);LinearLayout.LayoutParams ap=lp(62,62);ap.gravity=Gravity.CENTER;item.addView(avatar,ap);
+      TextView label=text(names[i],11,WHITE,false);label.setGravity(Gravity.CENTER);pad(label,2,7,2,0);item.addView(label);
+      LinearLayout.LayoutParams it=lp(78,-2);it.setMargins(dp(2),0,dp(2),0);strip.addView(item,it);
+      item.setOnClickListener(v->{if(n==0)chooseStory();else dialog("История · "+names[n],"Истории пользователей появятся после подключения сервера");});
+    }
+    sc.addView(strip);content.addView(sc);line(content);
+  }
+  void chooseStory(){android.content.Intent in=new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);in.addCategory(android.content.Intent.CATEGORY_OPENABLE);in.setType("image/*");startActivityForResult(in,402);}
   interface Select {void choose(int index);}
   void tabs(String[] names,int selected,Select onSelect){
     LinearLayout tabs=horizontal();for(int i=0;i<names.length;i++){final int k=i;LinearLayout cell=vertical();TextView t=text(names[i],14,i==selected?WHITE:MUTED,i==selected);t.setGravity(Gravity.CENTER);cell.addView(t,lp(-1,45));View under=new View(this);under.setBackgroundColor(i==selected?accent:BG);cell.addView(under,lp(-1,3));tabs.addView(cell,new LinearLayout.LayoutParams(0,-2,1));cell.setOnClickListener(v->onSelect.choose(k));}content.addView(tabs);line(content);
@@ -108,6 +124,9 @@ public class MainActivity extends Activity {
     TextView more=text("⋯",25,MUTED,false);top.addView(more);more.setOnClickListener(v->options("Публикация",new String[]{"Скрыть","Пожаловаться"},k->dialog("Публикация","Действие будет доступно после подключения сервера")));
     card.addView(top);TextView body=text(p.text,15,WHITE,false);body.setLineSpacing(dp(4),1);pad(body,54,10,2,12);card.addView(body);
     if(p.anonymous){TextView tags=text("#Бишкек     #Встреча     #Сегодня",12,Color.rgb(223,145,179),false);pad(tags,54,0,0,13);card.addView(tags);}
+    if(!p.media.isEmpty()){
+      try{ImageView media=new ImageView(this);media.setScaleType(ImageView.ScaleType.CENTER_CROP);media.setImageURI(android.net.Uri.parse(p.media));media.setBackground(shape(CARD,12));LinearLayout.LayoutParams mp=lp(-1,230);mp.setMargins(dp(54),0,0,dp(10));card.addView(media,mp);}catch(Exception e){}
+    }
     if(p.photos){LinearLayout photos=horizontal();pad(photos,54,0,0,10);ImageView a=photo("city.jpg",12),b=photo("wheel.jpg",12);LinearLayout.LayoutParams x=new LinearLayout.LayoutParams(0,dp(140),1);x.setMargins(0,0,dp(5),0);photos.addView(a,x);photos.addView(b,new LinearLayout.LayoutParams(0,dp(140),1));card.addView(photos);}
     LinearLayout actions=horizontal();pad(actions,54,0,0,0);
     String[] labels={(p.liked?"♥ ":"♡ ")+p.likes,"▢ "+p.comments,"⇄ "+p.reposts,"➤"};for(int k=0;k<4;k++){final int act=k;TextView btn=text(labels[k],13,k==0&&p.liked?accent:MUTED,false);btn.setGravity(Gravity.CENTER);actions.addView(btn,new LinearLayout.LayoutParams(0,dp(38),1));btn.setOnClickListener(v->{if(act==0){p.liked=!p.liked;p.likes+=p.liked?1:-1;persist();show(0);}if(act==1)comments(p);if(act==2){p.reposts++;persist();show(0);}if(act==3)dialog("Поделиться","Публикации пока доступны только внутри демонстрации");});}card.addView(actions);content.addView(card);line(content);
@@ -139,11 +158,15 @@ public class MainActivity extends Activity {
   void create(){heading("Новая публикация");EditText field=new EditText(this);field.setId(881);field.setTextColor(WHITE);field.setHintTextColor(MUTED);field.setHint("О чём думаешь?");field.setGravity(Gravity.TOP);field.setMinLines(7);field.setBackground(shape(CARD,15));pad(field,16,15,16,15);LinearLayout.LayoutParams f=lp(-1,-2);f.setMargins(dp(18),0,dp(18),dp(10));content.addView(field,f);
     row("Анонимная публикация",anon?"Включено · исчезнет через 24 часа":"Выключено",()->{anon=!anon;String s=field.getText().toString();show(2);((EditText)findViewById(881)).setText(s);});
     row("Кто увидит публикацию",audience,()->options("Аудитория",new String[]{"Вся Центральная Азия","Моя страна","1 км","5 км","10 км","25 км","50 км","100 км"},i->{audience=new String[]{"Вся Центральная Азия","Моя страна","1 км","5 км","10 км","25 км","50 км","100 км"}[i];String s=field.getText().toString();show(2);((EditText)findViewById(881)).setText(s);}));
-    row("Добавить фото или видео","Выбрать из галереи",()->chooseMedia());
-    TextView publish=button("Опубликовать",()->{String s=field.getText().toString().trim();if(s.isEmpty()){Toast.makeText(this,"Напиши текст",Toast.LENGTH_SHORT).show();return;}posts.add(0,new Post(anon?"Анонимный пользователь":"menly_user","сейчас",s,0,0,0,anon,false));anon=false;persist();show(0);});publish.setBackground(shape(accent,14));LinearLayout.LayoutParams p=lp(-1,52);p.setMargins(dp(18),dp(20),dp(18),0);content.addView(publish,p);
+    row("Добавить фото или видео",selectedMedia.isEmpty()?"Выбрать из галереи":"Фото выбрано ✓",()->chooseMedia());
+    TextView publish=button("Опубликовать",()->{String s=field.getText().toString().trim();if(s.isEmpty()){Toast.makeText(this,"Напиши текст",Toast.LENGTH_SHORT).show();return;}Post created=new Post(anon?"Анонимный пользователь":"menly_user","сейчас",s,0,0,0,anon,false);created.media=selectedMedia;posts.add(0,created);selectedMedia="";anon=false;persist();show(0);});publish.setBackground(shape(accent,14));LinearLayout.LayoutParams p=lp(-1,52);p.setMargins(dp(18),dp(20),dp(18),0);content.addView(publish,p);
   }
-  void chooseMedia(){android.content.Intent intent=new android.content.Intent(android.content.Intent.ACTION_GET_CONTENT);intent.setType("image/*");startActivityForResult(intent,400);}
-  @Override protected void onActivityResult(int requestCode,int resultCode,android.content.Intent data){super.onActivityResult(requestCode,resultCode,data);if(requestCode==400&&resultCode==RESULT_OK&&data!=null){Toast.makeText(this,"Фото выбрано. Публикация медиа появится после подключения хранилища.",Toast.LENGTH_LONG).show();}}
+  void chooseMedia(){android.content.Intent intent=new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);intent.addCategory(android.content.Intent.CATEGORY_OPENABLE);intent.setType("image/*");intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION|android.content.Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);startActivityForResult(intent,400);}
+  @Override protected void onActivityResult(int requestCode,int resultCode,android.content.Intent data){super.onActivityResult(requestCode,resultCode,data);if(resultCode==RESULT_OK&&data!=null&&data.getData()!=null){
+      try{getContentResolver().takePersistableUriPermission(data.getData(),android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(Exception e){}
+      if(requestCode==400){selectedMedia=data.getData().toString();Toast.makeText(this,"Фото добавлено к публикации",Toast.LENGTH_SHORT).show();}
+      if(requestCode==402){Toast.makeText(this,"История выбрана. Публикация историй потребует сервер.",Toast.LENGTH_SHORT).show();}
+    }}
   void activity(){heading("Активность");tabs(new String[]{"Все","Лайки","Ответы","Подписки"},0,i->{});row("♥  adi.kaz","Понравилась ваша публикация · 5 мин",()->{});row("▢  bakyt.uz","Ответил на вашу публикацию · 12 мин",()->{});row("♙  erol.kg","Подписался на вас · 23 мин",()->{});row("♥  temir.kgz","И ещё 24 человека лайкнули пост · 1 ч",()->{});}
   void profile(){View cover=new View(this);cover.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{Color.rgb(74,29,53),BG}));content.addView(cover,lp(-1,125));ImageView avatar=photo("avatar_profile.jpg",55);LinearLayout.LayoutParams a=lp(80,80);a.setMargins(dp(18),dp(-25),0,0);content.addView(avatar,a);
     TextView name=text(prefs.getString("display_name","aidar.kg"),23,WHITE,true);pad(name,18,10,18,2);content.addView(name);TextView handle=text(prefs.getString("handle","@aidar.kg")+" · "+prefs.getString("city","Бишкек")+" 🇰🇬",13,MUTED,false);pad(handle,18,0,18,15);content.addView(handle);
